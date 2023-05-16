@@ -1,66 +1,48 @@
 <?php
 
-namespace App\Repository;
+namespace App\Controller;
 
 use App\Entity\VinylMix;
-use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
-use Doctrine\Persistence\ManagerRegistry;
+use App\Repository\VinylMixRepository;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Routing\Annotation\Route;
 
-/**
- * @extends ServiceEntityRepository<VinylMix>
- *
- * @method VinylMix|null find($id, $lockMode = null, $lockVersion = null)
- * @method VinylMix|null findOneBy(array $criteria, array $orderBy = null)
- * @method VinylMix[]    findAll()
- * @method VinylMix[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
- */
-class VinylMixRepository extends ServiceEntityRepository
+class MixController extends AbstractController
 {
-    public function __construct(ManagerRegistry $registry)
+    #[Route('/mix/new')]
+    public function new(EntityManagerInterface $entityManager): Response
     {
-        parent::__construct($registry, VinylMix::class);
+        $mix = new VinylMix();
+        $mix->setTitle('Do you Remember... Phil Collins?!');
+        $mix->setDescription('A pure mix of drummers turned singers!');
+        $genres = ['pop', 'rock'];
+        $mix->setGenre($genres[array_rand($genres)]);
+        $mix->setTrackCount(rand(5, 20));
+        $mix->setVotes(rand(-50, 50));
+
+        $entityManager->persist($mix);
+        $entityManager->flush();
+
+        return new Response(sprintf(
+            'Mix %d is %d tracks of pure 80\'s heaven',
+            $mix->getId(),
+            $mix->getTrackCount()
+        ));
     }
 
-    public function add(VinylMix $entity, bool $flush = false): void
+    #[Route('/mix/{id}', name: 'app_mix_show')]
+    public function show($id, VinylMixRepository $mixRepository): Response
     {
-        $this->getEntityManager()->persist($entity);
+        $mix = $mixRepository->find($id);
 
-        if ($flush) {
-            $this->getEntityManager()->flush();
+        if (!$mix) {
+            throw $this->createNotFoundException('Mix not found');
         }
+
+        return $this->render('mix/show.html.twig', [
+            'mix' => $mix,
+        ]);
     }
-
-    public function remove(VinylMix $entity, bool $flush = false): void
-    {
-        $this->getEntityManager()->remove($entity);
-
-        if ($flush) {
-            $this->getEntityManager()->flush();
-        }
-    }
-
-    /**
-     * @return VinylMix[] Returns an array of VinylMix objects
-     */
-    public function findByExampleField($value): array
-    {
-        return $this->createQueryBuilder('v')
-            ->andWhere('v.exampleField = :val')
-            ->setParameter('val', $value)
-            ->orderBy('v.id', 'ASC')
-            ->setMaxResults(10)
-            ->getQuery()
-            ->getResult()
-        ;
-    }
-
-//    public function findOneBySomeField($value): ?VinylMix
-//    {
-//        return $this->createQueryBuilder('v')
-//            ->andWhere('v.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
 }
